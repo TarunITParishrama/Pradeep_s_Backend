@@ -30,9 +30,19 @@ export const getAllAmbulanceRecords = async (req: Request, res: Response) => {
 
     const skip = (page - 1) * limit;
 
+    const filters: any = {};
+    if (req.query.areaType) {
+      filters.areaType = { $regex: new RegExp(`^${req.query.areaType}$`, "i") };
+    }
+    if (req.query.selectedArea) {
+      filters.areaName = {
+        $regex: new RegExp(`^${req.query.selectedArea}$`, "i"),
+      };
+    }
+
     const [records, total] = await Promise.all([
-      Ambulance.find().skip(skip).limit(limit),
-      Ambulance.countDocuments(),
+      Ambulance.find(filters).skip(skip).limit(limit),
+      Ambulance.countDocuments(filters),
     ]);
 
     const totalPages = Math.ceil(total / limit);
@@ -55,3 +65,19 @@ export const getAllAmbulanceRecords = async (req: Request, res: Response) => {
     });
   }
 };
+
+//area names(panchayat or ward number)
+export const getDistinctAreas = async (req: Request, res: Response) => {
+  try {
+    const panchayats = await Ambulance.distinct("areaName", { areaType: "Panchayat" });
+    const wards = await Ambulance.distinct("areaName", { areaType: "Ward" });
+
+    res.status(200).json({
+      panchayats,
+      wards
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch areas", error });
+  }
+};
+
